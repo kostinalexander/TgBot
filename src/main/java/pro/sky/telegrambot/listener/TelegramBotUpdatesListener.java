@@ -2,12 +2,16 @@ package pro.sky.telegrambot.listener;
 
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.UpdatesListener;
+import com.pengrad.telegrambot.model.ResponseParameters;
 import com.pengrad.telegrambot.model.Update;
 import com.pengrad.telegrambot.request.SendMessage;
 import com.pengrad.telegrambot.response.SendResponse;
+import okhttp3.ResponseBody;
+import org.apache.coyote.Response;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -17,6 +21,7 @@ import pro.sky.telegrambot.repository.NotificationRepository;
 import javax.annotation.PostConstruct;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -63,6 +68,7 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
                 Pattern pattern = Pattern.compile("([0-9\\.\\:\\s]{16})(\\s)([\\W+]+)");
                 CharSequence string= update.message().text();
                 Matcher matcher = pattern.matcher(string);
+                Long chatId = update.message().chat().id();
                 if(matcher.matches()){
 
                     String dateTimeString = matcher.group(1);
@@ -71,13 +77,15 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
                     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm");
                     LocalDateTime date = LocalDateTime.parse(dateTimeString, formatter);
 
-                    NotificationTask notificationTask = new NotificationTask(textMessage, date);
+                    NotificationTask notificationTask = new NotificationTask(date,chatId,textMessage);
 
                     repository.save(notificationTask);
 //
                 }
 
+
             }
+
             // Process your updates here
 
         });
@@ -87,6 +95,7 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
 
     @Scheduled(cron = "0 0/1 * * * *")
     public void retrieveRowsWithCurrentDate() {
+
         System.out.println("retrieveRowsWithCurrentDate работает");
 
         LocalDateTime currentDateTime = LocalDateTime.now();
@@ -96,14 +105,25 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
         int day = currentDateTime.getDayOfMonth();
         int hour = currentDateTime.getHour();
         int minute = currentDateTime.getMinute();
-
         List<NotificationTask> tasks = repository.findByDataYearMonthDayHourMinute(year, month, day, hour, minute);
 
         for (NotificationTask task : tasks) {
-            System.out.println("Задача: " + task.getTextMessage() + " - " + task.getData());
+            System.out.println(task.getTextMessage());
+            SendMessage message = new SendMessage(task.getChat_id(), task.getTextMessage());
+            SendResponse response = telegramBot.execute(message);
+            System.out.println(response.errorCode());
+
         }
+
+         }
+
 
 
     }
 
-}
+
+
+
+
+
+
