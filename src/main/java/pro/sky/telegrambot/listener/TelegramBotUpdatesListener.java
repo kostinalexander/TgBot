@@ -124,9 +124,6 @@ public void demoTest1(){
 public void releaseTest1(){
     System.out.println("лад");
 }
-    public void releaseTest2(){
-        System.out.println("лад");
-    }
 
     }
 
